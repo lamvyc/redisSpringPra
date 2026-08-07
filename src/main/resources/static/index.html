@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Redis 学习实战 · 接口测试台</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #333; padding: 20px; }
+h1 { text-align: center; color: #cc0000; font-size: 24px; margin-bottom: 4px; }
+.subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 20px; }
+.subtitle b { color: #cc0000; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 16px; }
+.card { background: #fff; border: 1px solid #e3e8ef; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.card h2 { font-size: 15px; color: #cc0000; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #ffecec; }
+.card h2 small { font-weight: normal; color: #999; font-size: 12px; margin-left: 8px; }
+.row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.method { display: inline-block; min-width: 56px; text-align: center; font-size: 11px; font-weight: 700; color: #fff; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
+.get { background: #4caf50; }
+.post { background: #ff9800; }
+.put { background: #2196f3; }
+.del { background: #f44336; }
+.api-path { font-family: Menlo, Consolas, monospace; font-size: 12px; color: #555; background: #f3f4f6; padding: 3px 8px; border-radius: 4px; flex: 1; min-width: 140px; word-break: break-all; }
+button { font-size: 12px; border: none; border-radius: 4px; padding: 5px 14px; background: #cc0000; color: #fff; cursor: pointer; flex-shrink: 0; }
+button:hover { background: #990000; }
+button:disabled { opacity: 0.6; cursor: wait; }
+input { flex: 1; min-width: 60px; max-width: 150px; font-size: 12px; padding: 4px 8px; border: 1px solid #d6dbe3; border-radius: 4px; }
+.res { font-family: Menlo, Consolas, monospace; font-size: 11px; background: #f8f9fb; border: 1px solid #e8edf3; border-radius: 4px; padding: 8px; max-height: 140px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; margin-top: 4px; display: none; }
+.res.show { display: block; }
+.res.error { color: #c0392b; background: #fdf0ef; border-color: #f3c1bc; }
+.footer { text-align: center; color: #aaa; font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Redis 学习实战 · 接口测试台</h1>
+<p class="subtitle">所有请求均通过 <code>fetch()</code> 发起 → 打开 DevTools → Network → <b>Fetch/XHR</b> 查看</p>
+
+<div class="grid">
+
+<!-- ① 用户缓存 -->
+<div class="card">
+<h2>① 用户缓存 <small>String + Cache Aside</small></h2>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/user/{id}</span><input id="u1-id" type="number" value="1"><button onclick="u1.get()">查询</button></div>
+<div class="row"><span class="method put">PUT</span><span class="api-path">/api/user/{id} + body</span><input id="u1-uid" type="number" value="1"><input id="u1-name" type="text" value="张三"><input id="u1-age" type="number" value="25"><button onclick="u1.update()">更新</button></div>
+<div class="row"><span class="method del">DEL</span><span class="api-path">/api/user/{id}/cache</span><input id="u1-did" type="number" value="1"><button onclick="u1.del()">删缓存</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/user/{id}/ttl</span><input id="u1-tid" type="number" value="1"><button onclick="u1.ttl()">查TTL</button></div>
+<div class="res" id="u1-res"></div>
+</div>
+
+<!-- ② 商品缓存 -->
+<div class="card">
+<h2>② 商品缓存 <small>Hash 字段级</small></h2>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/product/{id}</span><input id="p2-id" type="number" value="1"><button onclick="p2.get()">查询</button></div>
+<div class="row"><span class="method put">PUT</span><span class="api-path">/api/product/{id} + body</span><input id="p2-uid" type="number" value="1"><input id="p2-price" type="text" value="7999"><button onclick="p2.update()">改价格</button></div>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/product/{id}/tag?tag=</span><input id="p2-tid" type="number" value="1"><input id="p2-tag" type="text" value="旗舰"><button onclick="p2.tag()">加标签</button></div>
+<div class="row"><span class="method del">DEL</span><span class="api-path">/api/product/{id}/cache</span><input id="p2-did" type="number" value="1"><button onclick="p2.del()">删缓存</button></div>
+<div class="res" id="p2-res"></div>
+</div>
+
+<!-- ③ 点赞 -->
+<div class="card">
+<h2>③ 点赞 <small>Set 去重 + 交集</small></h2>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/like/{pid}/{uid}</span><input id="l3-p" type="number" value="1"><input id="l3-u" type="number" value="1"><button onclick="l3.like()">👍点赞</button></div>
+<div class="row"><span class="method del">DEL</span><span class="api-path">/api/like/{pid}/{uid}</span><input id="l3-cp" type="number" value="1"><input id="l3-cu" type="number" value="1"><button onclick="l3.unlike()">取消</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/like/{pid}/check?userId=</span><input id="l3-xp" type="number" value="1"><input id="l3-xu" type="number" value="1"><button onclick="l3.check()">查已赞</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/like/{pid}/count</span><input id="l3-ct" type="number" value="1"><button onclick="l3.count()">点赞数</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/like/{pid}/common?productId2=</span><input id="l3-m1" type="number" value="1"><input id="l3-m2" type="number" value="2"><button onclick="l3.common()">共同点赞</button></div>
+<div class="res" id="l3-res"></div>
+</div>
+
+<!-- ④ 排行榜 -->
+<div class="card">
+<h2>④ 排行榜 <small>ZSet 实时排名</small></h2>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/rank/{uid}/score?points=</span><input id="r4-u" type="number" value="1"><input id="r4-p" type="number" value="100"><button onclick="r4.add()">加分</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/rank/{uid}/rank</span><input id="r4-ru" type="number" value="1"><button onclick="r4.rank()">查排名</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/rank/{uid}/score</span><input id="r4-su" type="number" value="1"><button onclick="r4.score()">查积分</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/rank/top?n=10</span><button onclick="r4.top()">Top10</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/rank/top/withScores</span><button onclick="r4.topSc()">Top10含分</button></div>
+<div class="res" id="r4-res"></div>
+</div>
+
+<!-- ⑤ 验证码 -->
+<div class="card">
+<h2>⑤ 验证码 <small>String + TTL</small></h2>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/captcha/send?phone=</span><input id="c5-phone" type="text" value="13800000001"><button onclick="c5.send()">发送</button></div>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/captcha/verify?phone=&code=</span><input id="c5-vp" type="text" value="13800000001"><input id="c5-code" type="text" value="123456"><button onclick="c5.verify()">校验</button></div>
+<div class="res" id="c5-res"></div>
+</div>
+
+<!-- ⑥ Token -->
+<div class="card">
+<h2>⑥ Token <small>TTL 滑动续期</small></h2>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/token/login?userId=</span><input id="t6-u" type="number" value="1"><button onclick="t6.login()">登录</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/token/verify?token=</span><input id="t6-t" type="text" placeholder="登录后自动填入"><button onclick="t6.verify()">校验</button></div>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/token/logout?token=</span><input id="t6-lt" type="text" placeholder="token"><button onclick="t6.logout()">退出</button></div>
+<div class="res" id="t6-res"></div>
+</div>
+
+<!-- ⑦ 限流 -->
+<div class="card">
+<h2>⑦ 接口限流 <small>INCR + EXPIRE</small></h2>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/rate-limit/test</span><button onclick="rl7.test()">连刷 11 次</button></div>
+<div class="res" id="rl7-res"></div>
+</div>
+
+<!-- ⑧ 穿透 -->
+<div class="card">
+<h2>⑧ 缓存穿透 <small>空对象 + 布隆</small></h2>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/penetration/product/{id}</span><input id="pe8-p" type="number" value="999"><button onclick="pe8.product()">查商品</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/penetration/user/{id}</span><input id="pe8-u" type="number" value="999"><button onclick="pe8.user()">查用户</button></div>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/penetration/user/{id}/register</span><input id="pe8-r" type="number" value="999"><button onclick="pe8.register()">注册ID</button></div>
+<div class="res" id="pe8-res"></div>
+</div>
+
+<!-- ⑨ 秒杀 -->
+<div class="card">
+<h2>⑨ 分布式锁秒杀 <small>Redisson</small></h2>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/stock/{pid}/init?stock=</span><input id="s9-p" type="number" value="3"><input id="s9-n" type="number" value="10"><button onclick="s9.init()">初始化</button></div>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/stock/{pid}/seckill?userId=</span><input id="s9-sp" type="number" value="3"><input id="s9-su" type="number" value="1"><button onclick="s9.seckill()">秒杀</button></div>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/stock/{pid}</span><input id="s9-gp" type="number" value="3"><button onclick="s9.get()">查库存</button></div>
+<div class="res" id="s9-res"></div>
+</div>
+
+<!-- ⑩ 通知 -->
+<div class="card">
+<h2>⑩ 消息通知 <small>Pub / Sub</small></h2>
+<div class="row"><span class="method post">POST</span><span class="api-path">/api/notice/publish?message=</span><input id="n10-m" type="text" value="订单已发货"><button onclick="n10.publish()">发布</button></div>
+<div class="res" id="n10-res"></div>
+</div>
+
+<!-- ⑪ Spring Cache -->
+<div class="card">
+<h2>⑪ Spring Cache <small>三注解</small></h2>
+<div class="row"><span class="method get">GET</span><span class="api-path">/api/cache/user/{id}</span><input id="sc11-id" type="number" value="1"><button onclick="sc11.get()">@Cacheable</button></div>
+<div class="row"><span class="method put">PUT</span><span class="api-path">/api/cache/user/{id} + body</span><input id="sc11-uid" type="number" value="1"><input id="sc11-name" type="text" value="李四"><input id="sc11-age" type="number" value="30"><button onclick="sc11.update()">@CachePut</button></div>
+<div class="row"><span class="method del">DEL</span><span class="api-path">/api/cache/user/{id}</span><input id="sc11-did" type="number" value="1"><button onclick="sc11.evict()">@CacheEvict</button></div>
+<div class="res" id="sc11-res"></div>
+</div>
+
+</div>
+
+<div class="footer">每点击一个按钮，请求都会在 DevTools → Network → <b>Fetch/XHR</b> 中显示</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function req(method, url, body) {
+  const opt = { method, headers: {} };
+  if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  const r = await fetch(url, opt);
+  let data; try { data = await r.json(); } catch (e) { data = await r.text(); }
+  return { status: r.status, data };
+}
+
+function show(resId, result) {
+  const box = $(resId);
+  box.classList.add('show');
+  box.classList.toggle('error', result.status >= 400);
+  box.textContent = 'HTTP ' + result.status + '\n' + (typeof result.data === 'object' ? JSON.stringify(result.data, null, 2) : result.data);
+}
+
+function guard(btn, fn) {
+  return async () => {
+    if (btn) btn.disabled = true;
+    try { await fn(); } finally { if (btn) btn.disabled = false; }
+  };
+}
+
+// ① 用户缓存
+const u1 = {
+  get: guard(null, () => req('GET', '/api/user/' + $('u1-id').value).then(r => show('u1-res', r))),
+  update: guard(null, () => req('PUT', '/api/user/' + $('u1-uid').value, { name: $('u1-name').value, age: parseInt($('u1-age').value) }).then(r => show('u1-res', r))),
+  del: guard(null, () => req('DELETE', '/api/user/' + $('u1-did').value + '/cache').then(r => show('u1-res', r))),
+  ttl: guard(null, () => req('GET', '/api/user/' + $('u1-tid').value + '/ttl').then(r => show('u1-res', r)))
+};
+
+// ② 商品缓存
+const p2 = {
+  get: guard(null, () => req('GET', '/api/product/' + $('p2-id').value).then(r => show('p2-res', r))),
+  update: guard(null, () => req('PUT', '/api/product/' + $('p2-uid').value, { price: parseFloat($('p2-price').value) }).then(r => show('p2-res', r))),
+  tag: guard(null, () => req('POST', '/api/product/' + $('p2-tid').value + '/tag?tag=' + encodeURIComponent($('p2-tag').value)).then(r => show('p2-res', r))),
+  del: guard(null, () => req('DELETE', '/api/product/' + $('p2-did').value + '/cache').then(r => show('p2-res', r)))
+};
+
+// ③ 点赞
+const l3 = {
+  like: guard(null, () => req('POST', '/api/like/' + $('l3-p').value + '/' + $('l3-u').value).then(r => show('l3-res', r))),
+  unlike: guard(null, () => req('DELETE', '/api/like/' + $('l3-cp').value + '/' + $('l3-cu').value).then(r => show('l3-res', r))),
+  check: guard(null, () => req('GET', '/api/like/' + $('l3-xp').value + '/check?userId=' + $('l3-xu').value).then(r => show('l3-res', r))),
+  count: guard(null, () => req('GET', '/api/like/' + $('l3-ct').value + '/count').then(r => show('l3-res', r))),
+  common: guard(null, () => req('GET', '/api/like/' + $('l3-m1').value + '/common?productId2=' + $('l3-m2').value).then(r => show('l3-res', r)))
+};
+
+// ④ 排行榜
+const r4 = {
+  add: guard(null, () => req('POST', '/api/rank/' + $('r4-u').value + '/score?points=' + $('r4-p').value).then(r => show('r4-res', r))),
+  rank: guard(null, () => req('GET', '/api/rank/' + $('r4-ru').value + '/rank').then(r => show('r4-res', r))),
+  score: guard(null, () => req('GET', '/api/rank/' + $('r4-su').value + '/score').then(r => show('r4-res', r))),
+  top: guard(null, () => req('GET', '/api/rank/top?n=10').then(r => show('r4-res', r))),
+  topSc: guard(null, () => req('GET', '/api/rank/top/withScores?n=10').then(r => show('r4-res', r)))
+};
+
+// ⑤ 验证码
+const c5 = {
+  send: guard(null, () => req('POST', '/api/captcha/send?phone=' + encodeURIComponent($('c5-phone').value)).then(r => show('c5-res', r))),
+  verify: guard(null, () => req('POST', '/api/captcha/verify?phone=' + encodeURIComponent($('c5-vp').value) + '&code=' + encodeURIComponent($('c5-code').value)).then(r => show('c5-res', r)))
+};
+
+// ⑥ Token
+const t6 = {
+  login: guard(null, () => req('POST', '/api/token/login?userId=' + $('t6-u').value).then(r => {
+    show('t6-res', r);
+    const token = r.data && r.data.data && r.data.data.token;
+    if (token) { $('t6-t').value = token; $('t6-lt').value = token; }
+  })),
+  verify: guard(null, () => req('GET', '/api/token/verify?token=' + encodeURIComponent($('t6-t').value)).then(r => show('t6-res', r))),
+  logout: guard(null, () => req('POST', '/api/token/logout?token=' + encodeURIComponent($('t6-lt').value)).then(r => show('t6-res', r)))
+};
+
+// ⑦ 限流
+const rl7 = {
+  test: guard(null, async () => {
+    for (let i = 1; i <= 11; i++) {
+      const r = await req('GET', '/api/rate-limit/test');
+      const box = $('rl7-res');
+      box.classList.add('show');
+      box.classList.toggle('error', r.status >= 400);
+      box.textContent = '[第 ' + i + ' 次] HTTP ' + r.status + '\n' + JSON.stringify(r.data, null, 2) + (i < 11 ? '\n---' : '');
+      await new Promise(res => setTimeout(res, 80));
+    }
+  })
+};
+
+// ⑧ 穿透
+const pe8 = {
+  product: guard(null, () => req('GET', '/api/penetration/product/' + $('pe8-p').value).then(r => show('pe8-res', r))),
+  user: guard(null, () => req('GET', '/api/penetration/user/' + $('pe8-u').value).then(r => show('pe8-res', r))),
+  register: guard(null, () => req('POST', '/api/penetration/user/' + $('pe8-r').value + '/register').then(r => show('pe8-res', r)))
+};
+
+// ⑨ 秒杀
+const s9 = {
+  init: guard(null, () => req('POST', '/api/stock/' + $('s9-p').value + '/init?stock=' + $('s9-n').value).then(r => show('s9-res', r))),
+  seckill: guard(null, () => req('POST', '/api/stock/' + $('s9-sp').value + '/seckill?userId=' + $('s9-su').value).then(r => show('s9-res', r))),
+  get: guard(null, () => req('GET', '/api/stock/' + $('s9-gp').value).then(r => show('s9-res', r)))
+};
+
+// ⑩ 通知
+const n10 = {
+  publish: guard(null, () => req('POST', '/api/notice/publish?message=' + encodeURIComponent($('n10-m').value)).then(r => show('n10-res', r)))
+};
+
+// ⑪ Spring Cache
+const sc11 = {
+  get: guard(null, () => req('GET', '/api/cache/user/' + $('sc11-id').value).then(r => show('sc11-res', r))),
+  update: guard(null, () => req('PUT', '/api/cache/user/' + $('sc11-uid').value, { name: $('sc11-name').value, age: parseInt($('sc11-age').value) }).then(r => show('sc11-res', r))),
+  evict: guard(null, () => req('DELETE', '/api/cache/user/' + $('sc11-did').value).then(r => show('sc11-res', r)))
+};
+</script>
+
+</body>
+</html>
