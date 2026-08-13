@@ -52,14 +52,21 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 - 为什么不用 MySQL：Redis 单线程 10万+ QPS，MySQL 磁盘 IO 远达不到（MySQL 负责持久化，Redis 做缓存加速）
 
 ### 4. 常见命令
-| 命令 | 作用 | RedisTemplate |
-|------|------|--------------|
-| SET/GET | 写入/读取 | opsForValue().set/get |
-| INCR/DECR | 原子增减 | opsForValue().increment/decrement |
-| EXPIRE | 过期时间 | expire(key, ttl) |
-| DEL | 删除 | delete(key) |
+
+> String 存值，Hash 存对象，List 存序列，Set 存集合，ZSet 存排序。
+
+| 数据结构       | Spring Data Redis 入口 | 写（新增/更新）                 | 查                          | 删                               | **核心行为 / 特性**                           | 典型场景                 |
+|------------|----------------------|--------------------------|----------------------------|---------------------------------|-----------------------------------------|----------------------|
+| **String** | `opsForValue()`      | `set` / `getAndSet`      | `get`                      | `delete`                        | **原子计数**：`increment`                    | JSON缓存、计数器、Token、验证码 |
+| **Hash**   | `opsForHash()`       | `put` / `putAll`         | `get` / `entries`          | `delete`（字段）                    | **字段级操作**：`increment`                   | 对象缓存、用户信息            |
+| **List**   | `opsForList()`       | `leftPush` / `rightPush` | `range` / `index`          | `remove` / `trim`               | **双端操作**：`leftPop` / `rightPop`         | 消息队列、最新列表            |
+| **Set**    | `opsForSet()`        | `add`                    | `members` / `isMember`     | `remove` / `pop`                | **集合运算**：`intersect` / `union` / `diff` | 标签、去重、共同好友、抽奖        |
+| **ZSet**   | `opsForZSet()`       | `add` / `incrementScore` | `range` / `score` / `rank` | `remove` / `removeRangeByScore` | **按 Score 排序/排名**                       | 排行榜、延迟队列、优先级任务       |
+
+
 
 ### 5. 执行结果
+
 `redis-cli` 输入 `SET user:info:1 张三` → OK；`GET user:info:1` → 张三
 
 ### 6. 注意事项
@@ -74,13 +81,13 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 
 # 第二阶段 五种数据结构
 
-| 结构 | 底层实现 | 适用场景 | 项目案例 |
-|------|---------|---------|---------|
-| String | SDS 动态字符串 | 缓存/计数器/Token/验证码 | 案例1/5/6/7 |
-| Hash | 哈希表 + 压缩列表 | 对象字段级读写 | 案例2 |
-| List | 双向链表/快速列表 | 消息队列、最新列表 | 扩展 |
-| Set | 哈希表 + intset | 点赞/标签/共同好友 | 案例3 |
-| ZSet | 跳表 + 哈希表 | 排行榜 | 案例4 |
+| 结构     | 底层实现         | 适用场景             | 项目案例      |
+|--------|--------------|------------------|-----------|
+| String | SDS 动态字符串    | 缓存/计数器/Token/验证码 | 案例1/5/6/7 |
+| Hash   | 哈希表 + 压缩列表   | 对象字段级读写          | 案例2       |
+| List   | 双向链表/快速列表    | 消息队列、最新列表        | 扩展        |
+| Set    | 哈希表 + intset | 点赞/标签/共同好友       | 案例3       |
+| ZSet   | 跳表 + 哈希表     | 排行榜              | 案例4       |
 
 ## 面试回答（数据结构选型）
 **问：点赞为什么用 Set？**
@@ -95,11 +102,13 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 
 ## RedisTemplate vs StringRedisTemplate
 
-| 对比 | RedisTemplate | StringRedisTemplate |
-|------|--------------|-------------------|
-| Value 序列化 | JSON（带类型信息） | 纯字符串 |
-| 适用 | 存对象（User/Product） | 存纯字符串（计数/Token/Set成员） |
-| 可读性 | redis-cli 可见 JSON | 完全可读 |
+**StringRedisTemplate 继承自 RedisTemplate<String, String>，键值固定为字符串，序列化轻量、数据可读、性能高效，覆盖绝大多数场景；存对象转 JSON 即可，除非必须存二进制才用父**
+
+| 对比        | RedisTemplate     | StringRedisTemplate   |
+|-----------|-------------------|-----------------------|
+| Value 序列化 | JSON（带类型信息）       | 纯字符串                  |
+| 适用        | 存对象（User/Product） | 存纯字符串（计数/Token/Set成员） |
+| 可读性       | redis-cli 可见 JSON | 完全可读                  |
 
 **面试点：为什么 key 用 String、value 用 JSON？**
 - String key：redis-cli 可读、方便排查
@@ -194,11 +203,11 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 为什么 500ms：等待读请求把旧缓存重建完成的时间窗口
 
 ## 持久化
-| 方式 | 原理 | 优点 | 缺点 |
-|------|------|------|------|
-| RDB | 快照 | 恢复快文件小 | 可能丢最后几分钟数据 |
-| AOF | 追加日志 | 最多丢 1 秒 | 文件大恢复慢 |
-| Redis7 混合 | AOF 重写时用 RDB 头 | 兼顾恢复速度和低丢失 | — |
+| 方式        | 原理             | 优点         | 缺点         |
+|-----------|----------------|------------|------------|
+| RDB       | 快照             | 恢复快文件小     | 可能丢最后几分钟数据 |
+| AOF       | 追加日志           | 最多丢 1 秒    | 文件大恢复慢     |
+| Redis7 混合 | AOF 重写时用 RDB 头 | 兼顾恢复速度和低丢失 | —          |
 
 ## 高可用
 主从复制（数据冗余）→ Sentinel（故障自动切换）→ Cluster（分片扩容）
@@ -211,13 +220,13 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 
 # 第六阶段 高级特性（扩展索引）
 
-| 特性 | 一句话 | 场景 |
-|------|-------|------|
-| Bitmap | 位图，1 bit 存一个状态 | 签到、用户在线状态 |
-| HyperLogLog | 基数统计，12KB 存 2^64 | UV 统计 |
-| GEO | 经纬度存储与距离计算 | 附近的人 |
-| Stream | 持久化消息队列 | 可靠消息 |
-| ACL | 用户权限控制 | 多团队共享 Redis |
+| 特性          | 一句话              | 场景          |
+|-------------|------------------|-------------|
+| Bitmap      | 位图，1 bit 存一个状态   | 签到、用户在线状态   |
+| HyperLogLog | 基数统计，12KB 存 2^64 | UV 统计       |
+| GEO         | 经纬度存储与距离计算       | 附近的人        |
+| Stream      | 持久化消息队列          | 可靠消息        |
+| ACL         | 用户权限控制           | 多团队共享 Redis |
 
 ---
 
