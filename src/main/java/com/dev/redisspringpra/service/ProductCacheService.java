@@ -3,7 +3,7 @@ package com.dev.redisspringpra.service;
 import com.dev.redisspringpra.common.BizException;
 import com.dev.redisspringpra.constant.RedisKeyConstants;
 import com.dev.redisspringpra.entity.Product;
-import com.dev.redisspringpra.repository.MockDb;
+import com.dev.redisspringpra.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -41,7 +41,7 @@ import java.util.Map;
 public class ProductCacheService {
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final MockDb mockDb;
+    private final ProductRepository productRepository;
 
     /** 缓存过期时间：1 小时 */
     private static final Duration CACHE_TTL = Duration.ofHours(1);
@@ -67,7 +67,7 @@ public class ProductCacheService {
         log.debug("【Hash缓存未命中】key={}，查询数据库", key);
 
         // 3. 查数据库并缓存重建
-        Product product = mockDb.findProductById(productId)
+        Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BizException("商品不存在"));
 
         // 4. 写入 Hash：field 是字段名，value 是字段值
@@ -89,7 +89,7 @@ public class ProductCacheService {
         String key = RedisKeyConstants.PRODUCT_DETAIL + productId;
 
         // 1. 更新数据库
-        Product product = mockDb.findProductById(productId)
+        Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BizException("商品不存在"));
         // 记录哪些字段变化了，用于「只更新变化的 Hash 字段」
         Map<String, String> changedFields = new HashMap<>();
@@ -106,7 +106,7 @@ public class ProductCacheService {
             product.setDescription(description);
             changedFields.put("description", description);
         }
-        mockDb.updateProduct(product);
+        productRepository.save(product);
         log.debug("【更新数据库】productId={}, 变更字段={}", productId, changedFields.keySet());
 
         // 2. 同步更新缓存字段（HSET 只改变化的字段）

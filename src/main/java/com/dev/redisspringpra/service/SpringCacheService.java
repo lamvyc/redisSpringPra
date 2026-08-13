@@ -2,7 +2,7 @@ package com.dev.redisspringpra.service;
 
 import com.dev.redisspringpra.common.BizException;
 import com.dev.redisspringpra.entity.User;
-import com.dev.redisspringpra.repository.MockDb;
+import com.dev.redisspringpra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SpringCacheService {
 
-    private final MockDb mockDb;
+    private final UserRepository userRepository;
 
     /**
      * 查询用户，自动缓存
@@ -43,7 +43,7 @@ public class SpringCacheService {
     @Cacheable(cacheNames = "user", key = "#userId")
     public User getUserWithCache(Long userId) {
         log.debug("【Spring Cache】缓存未命中，查询数据库 userId={}", userId);
-        return mockDb.findUserById(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new BizException("用户不存在"));
     }
 
@@ -55,7 +55,7 @@ public class SpringCacheService {
      */
     @CachePut(cacheNames = "user", key = "#userId")
     public User updateUserWithCache(Long userId, String name, Integer age) {
-        User user = mockDb.findUserById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BizException("用户不存在"));
         if (name != null) {
             user.setName(name);
@@ -63,7 +63,7 @@ public class SpringCacheService {
         if (age != null) {
             user.setAge(age);
         }
-        mockDb.updateUser(user);
+        userRepository.save(user);
         log.debug("【Spring Cache】@CachePut 更新DB并刷新缓存 userId={}", userId);
         return user;
     }

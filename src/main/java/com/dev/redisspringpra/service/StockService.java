@@ -2,7 +2,7 @@ package com.dev.redisspringpra.service;
 
 import com.dev.redisspringpra.common.BizException;
 import com.dev.redisspringpra.constant.RedisKeyConstants;
-import com.dev.redisspringpra.repository.MockDb;
+import com.dev.redisspringpra.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -38,7 +38,7 @@ public class StockService {
 
     private final RedissonClient redissonClient;
     private final StringRedisTemplate stringRedisTemplate;
-    private final MockDb mockDb;
+    private final ProductRepository productRepository;
 
     /**
      * 秒杀扣减库存（Redisson 分布式锁版本）
@@ -49,7 +49,7 @@ public class StockService {
      * 3. 业务执行完成释放锁。
      * <p>
      * 为什么库存扣减还要锁？
-     * - Redis DECR 能保证「Redis 库存」原子，但最终要落库（MockDb），
+     * - Redis DECR 能保证「Redis 库存」原子，但最终要落库（MySQL），
      *   数据库扣减 + 记录订单等操作必须串行化，否则并发下数据库超卖。
      */
     public boolean seckill(Long productId, Long userId) {
@@ -81,9 +81,10 @@ public class StockService {
             log.debug("【获取锁成功】lockKey={}, 线程={}", lockKey, Thread.currentThread().getName());
 
             // ===== 阶段3：数据库库存扣减（临界区） =====
-            // 模拟真实数据库扣减 + 订单创建等耗时业务
-            boolean dbSuccess = mockDb.deductStock(productId);
-            if (!dbSuccess) {
+            // 真实数据库扣减：UPDATE ... WHERE stock > 0 原子扣减，返回受影响行数
+            // 配合分布式锁，双重保证并发下不超卖
+            int affected = productRepository.deductStock(productId);
+            if (affected == 0) {
                 stringRedisTemplate.opsForValue().increment(stockKey);
                 log.warn("【秒杀失败】DB扣减失败，productId={}", productId);
                 return false;

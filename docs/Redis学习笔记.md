@@ -47,9 +47,9 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 - Redis 6 多线程：**网络 IO 多线程，命令执行仍单线程**（保证原子性）
 
 ### 3. Java 后端视角
-- 项目位置：`config/RedisConfig.java`、`repository/MockDb.java`（模拟 MySQL）
+- 项目位置：`config/RedisConfig.java`、业务数据在 MySQL（`repository/` 下 JPA Repository + DataInitializer 种子数据）
 - Key 设计：`业务模块:业务类型:ID`（见 `constant/RedisKeyConstants.java`）
-- 为什么不用 MySQL：Redis 单线程 10万+ QPS，MySQL 磁盘 IO 远达不到
+- 为什么不用 MySQL：Redis 单线程 10万+ QPS，MySQL 磁盘 IO 远达不到（MySQL 负责持久化，Redis 做缓存加速）
 
 ### 4. 常见命令
 | 命令 | 作用 | RedisTemplate |
@@ -107,11 +107,11 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 
 ## Spring Cache 三大注解
 
-| 注解 | 作用 | 项目位置 |
-|------|------|---------|
-| @Cacheable | 查询：先查缓存，未命中执行方法并写缓存 | `SpringCacheService.getUserWithCache` |
-| @CachePut | 更新：执行方法后把返回值写缓存 | `SpringCacheService.updateUserWithCache` |
-| @CacheEvict | 删除：执行方法后删缓存 | `SpringCacheService.evictUserCache` |
+| 注解          | 作用                  | 项目位置                                     |
+|-------------|---------------------|------------------------------------------|
+| @Cacheable  | 查询：先查缓存，未命中执行方法并写缓存 | `SpringCacheService.getUserWithCache`    |
+| @CachePut   | 更新：执行方法后把返回值写缓存     | `SpringCacheService.updateUserWithCache` |
+| @CacheEvict | 删除：执行方法后删缓存         | `SpringCacheService.evictUserCache`      |
 
 **面试点：注解 vs 手写 RedisTemplate？**
 - 注解：适合缓存逻辑统一的场景，开发快
@@ -172,7 +172,7 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 ## 案例9：分布式锁（Redisson）
 - **代码**：`service/StockService.java`、`controller/StockController.java`、`config/RedissonConfig.java`
 - **为什么用 Redisson 不用手写 SETNX**：看门狗自动续期（防锁过期）、Lua 原子校验持有者（防误删）、可重入
-- **秒杀流程**：DECR 预扣 Redis 库存 → tryLock 分布式锁 → DB 扣减落库 → 释放锁
+- **秒杀流程**：DECR 预扣 Redis 库存 → tryLock 分布式锁 → MySQL 原子扣减（UPDATE ... WHERE stock > 0）→ 释放锁
 
 ### 面试回答
 **问：Redisson 分布式锁的原理？**
@@ -239,11 +239,16 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 # 1. 启动 Redis（如未启动）
 redis-server
 
-# 2. 运行全部案例测试（11 个用例）
-JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.11/Contents/Home mvn test
+# 2. 初始化 MySQL（只需首次，root 密码按本机修改）
+mysql -uroot -p你的密码 < sql/init.sql
+# 或只建库：mysql -uroot -p你的密码 -e "CREATE DATABASE IF NOT EXISTS redis_spring_pra DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci;"
+# 表结构由 JPA ddl-auto=update 启动自动创建，表为空自动插入 5 用户 + 3 商品种子数据
 
-# 3. 启动应用（方便 curl 测试 REST 接口）
-JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.11/Contents/Home mvn spring-boot:run
+# 3. 运行全部案例测试（11 个用例）
+JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.12/Contents/Home mvn test
+
+# 4. 启动应用（方便 curl 测试 REST 接口）
+JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.12/Contents/Home mvn spring-boot:run
 ```
 
 **接口速查**（启动后 8080 端口）：

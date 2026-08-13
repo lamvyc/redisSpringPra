@@ -1,6 +1,13 @@
 spring:
   application:
     name: redisSpringPra
+  datasource:
+    # 真实 MySQL 数据源（需先创建数据库 redis_spring_pra，字符集 utf8mb4）
+    # 注意：characterEncoding 参数要求 Java 字符集名（UTF-8），不是 MySQL 的 utf8mb4
+    url: jdbc:mysql://localhost:3306/redis_spring_pra?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
       host: localhost
@@ -18,6 +25,15 @@ spring:
           min-idle: 2
           # 获取连接最大等待时间
           max-wait: 3s
+  # JPA 配置（自动建表，启动时插入演示数据由 DataInitializer 完成）
+  jpa:
+    hibernate:
+      # update：启动时自动创建/更新表结构（生产环境一般用 validate + 手动迁移）
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
   cache:
     type: redis
     redis:

@@ -4,7 +4,8 @@ import com.dev.redisspringpra.common.BizException;
 import com.dev.redisspringpra.constant.RedisKeyConstants;
 import com.dev.redisspringpra.entity.Product;
 import com.dev.redisspringpra.entity.User;
-import com.dev.redisspringpra.repository.MockDb;
+import com.dev.redisspringpra.repository.ProductRepository;
+import com.dev.redisspringpra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -40,7 +41,8 @@ import java.util.Optional;
 public class CachePenetrationService {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final MockDb mockDb;
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
 
     /** 空对象缓存 TTL：3 分钟（比正常缓存短，防止数据插入后长期读不到） */
     private static final Duration EMPTY_TTL = Duration.ofMinutes(3);
@@ -79,7 +81,7 @@ public class CachePenetrationService {
         log.debug("【缓存未命中】key={}，查数据库", key);
 
         // 2. 查 DB
-        Optional<Product> dbResult = mockDb.findProductById(productId);
+        Optional<Product> dbResult = productRepository.findById(productId);
 
         if (dbResult.isEmpty()) {
             // 3a. DB 不存在 → 写空对象，TTL 设短，防止数据插入后长期缓存空值
@@ -123,7 +125,7 @@ public class CachePenetrationService {
         }
 
         // 3. 查 DB
-        User user = mockDb.findUserById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BizException("用户不存在"));
         // 4. 写缓存
         redisTemplate.opsForValue().set(key, user, NORMAL_TTL);

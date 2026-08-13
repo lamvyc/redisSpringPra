@@ -14,7 +14,10 @@
 | Java              | 21        | 开发语言                                               |
 | Spring Data Redis | 随 Boot 管理 | RedisTemplate / StringRedisTemplate / Spring Cache |
 | Redisson          | 3.38.1    | 分布式锁                                               |
-| Lombok            | 随 Boot 管理 | 简化实体代码                                             |
+| MySQL             | 8.x       | 业务数据持久化（t_user / t_product）                       |
+| Spring Data JPA   | 随 Boot 管理 | 数据库 ORM 访问                                         |
+| JdbcTemplate      | 随 Boot 管理 | 种子数据初始化（原生 INSERT）                                 |
+| Lombok            | 1.18.46   | 简化实体代码（显式固定版本，兼容高版本 JDK 编译）                      |
 | Redis             | 7.x（本机）   | 缓存 / 数据结构 / Pub/Sub                                |
 
 ---
@@ -23,11 +26,12 @@
 
 ### 1. 环境要求
 
-| 依赖    | 版本   | 验证命令                     |
-|-------|------|--------------------------|
-| JDK   | 21   | `java -version`          |
-| Maven | 3.9+ | `mvn -version`           |
-| Redis | 5.0+ | `redis-server --version` |
+| 依赖    | 版本   | 验证命令                                          |
+|-------|------|-----------------------------------------------|
+| JDK   | 21   | `java -version`                               |
+| Maven | 3.9+ | `mvn -version`                                |
+| Redis | 5.0+ | `redis-server --version`                      |
+| MySQL | 8.x  | `mysql --version` 且本机 MySQL 服务已启动           |
 
 ### 2. 获取代码
 
@@ -58,11 +62,27 @@ redis-server
 ```
 </details>
 
-### 4. 编译项目
+### 4. 初始化 MySQL 数据库（只需首次）
+
+项目使用 MySQL 存储业务数据（用户表 `t_user`、商品表 `t_product`）。
+
+```bash
+# 方式一：直接执行项目内建库脚本（root 密码按本机实际修改）
+mysql -uroot -p你的密码 < sql/init.sql
+
+# 方式二：只创建数据库，表结构由 JPA ddl-auto=update 启动时自动创建
+mysql -uroot -p你的密码 -e "CREATE DATABASE IF NOT EXISTS redis_spring_pra DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci;"
+```
+
+> ⚠️ 如果 MySQL 用户名/密码与本机不同，修改 `src/main/resources/application.yml` 中的 `spring.datasource.username` 和 `spring.datasource.password`。
+
+启动时若表为空，项目会自动插入 5 个演示用户 + 3 个演示商品（见 `repository/DataInitializer.java`）。
+
+### 5. 编译项目
 
 ```bash
 # 使用 JDK 21（按本机实际 JDK 21 路径调整）
-export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.11/Contents/Home
+export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.12/Contents/Home
 
 # 下载依赖并编译
 mvn clean compile
@@ -77,7 +97,7 @@ mvn clean compile
 ### 方式一：运行全部案例测试（推荐先做这个）
 
 ```bash
-export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.11/Contents/Home
+export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.12/Contents/Home
 mvn test
 ```
 
@@ -86,7 +106,7 @@ mvn test
 ### 方式二：启动 Web 服务（REST 接口测试）
 
 ```bash
-export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.11/Contents/Home
+export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.12/Contents/Home
 mvn spring-boot:run
 ```
 
@@ -145,13 +165,13 @@ curl "http://localhost:8080/api/stock/3"
 
 ### 第一步：读骨架（5 个文件，10 分钟）
 
-| 顺序 | 文件                                   | 读什么                  | 回答什么问题             |
-|----|--------------------------------------|----------------------|--------------------|
-| 1  | `pom.xml`                            | 5 个依赖                | 项目用了哪些技术栈？         |
-| 2  | `src/main/resources/application.yml` | Redis 连接、缓存 TTL、限流参数 | 配置如何与代码关联？         |
-| 3  | `RedisSpringPraApplication.java`     | 启动类                  | 项目入口               |
-| 4  | `constant/RedisKeyConstants.java`    | 所有 Key 前缀            | Redis Key 命名规范是什么？ |
-| 5  | `repository/MockDb.java`             | 预置用户/商品数据            | 数据从哪来？（模拟 MySQL）   |
+| 顺序 | 文件                                                                                   | 读什么                                        | 回答什么问题             |
+|----|--------------------------------------------------------------------------------------|--------------------------------------------|--------------------|
+| 1  | `pom.xml`                                                                            | 8 个依赖（Web/Redis/Redisson/MySQL/JPA/Lombok） | 项目用了哪些技术栈？         |
+| 2  | `src/main/resources/application.yml`                                                 | 数据源、Redis 连接、JPA、缓存 TTL、限流参数               | 配置如何与代码关联？         |
+| 3  | `RedisSpringPraApplication.java`                                                     | 启动类                                        | 项目入口               |
+| 4  | `constant/RedisKeyConstants.java`                                                    | 所有 Key 前缀                                  | Redis Key 命名规范是什么？ |
+| 5  | `repository/UserRepository.java` + `ProductRepository.java` + `DataInitializer.java` | JPA 访问 MySQL + 启动自动初始化种子数据                 | 数据从哪来？（MySQL 持久化）  |
 
 ### 第二步：读公共层（5 个文件，15 分钟）
 
@@ -224,7 +244,9 @@ curl "http://localhost:8080/api/stock/3"
 
 ```
 redis-learning/
-├── pom.xml                          # Maven 配置（Web + Redis + Redisson + Lombok）
+├── pom.xml                          # Maven 配置（Web + Redis + Redisson + MySQL + JPA + Lombok）
+├── sql/
+│   └── init.sql                     # MySQL 建库脚本（首次初始化）
 ├── docs/
 │   └── Redis学习笔记.md              # 📚 核心学习文档（知识地图/7步知识点/面试）
 └── src/
@@ -233,14 +255,14 @@ redis-learning/
     │   ├── config/      # RedisConfig / RedissonConfig / RedisPubSubConfig / AppProperties
     │   ├── common/      # Result 统一返回 / BizException / 全局异常
     │   ├── constant/    # RedisKeyConstants（Key 规范）
-    │   ├── entity/      # User / Product
-    │   ├── repository/  # MockDb（内存 Map 模拟 MySQL）
+    │   ├── entity/      # User / Product（JPA 实体，映射 t_user / t_product）
+    │   ├── repository/  # ★ UserRepository / ProductRepository（JPA）+ DataInitializer（种子数据）
     │   ├── dto/         # 请求参数
     │   ├── service/     # ★ 10 个业务案例（核心学习文件）
     │   ├── controller/  # REST 接口（测试入口）
     │   └── listener/    # Pub/Sub 订阅者
     ├── main/resources/
-    │   └── application.yml   # Redis 连接 / 缓存配置 / 业务参数
+    │   └── application.yml   # 数据源 / Redis 连接 / JPA / 缓存配置 / 业务参数
     └── test/java/
         └── RedisLearningApplicationTests.java  # ★ 11 个用例集成测试
 ```
@@ -255,8 +277,14 @@ redis-learning/
 **Q：`mvn test` 报 Lombok 编译错误？**
 Maven 运行的 JDK 版本过高（如 25/26），改用 JDK 21：
 ```bash
-export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.11/Contents/Home
+export JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.12/Contents/Home
 ```
+
+**Q：启动报错连接不上 MySQL？**
+1. 确认本机 MySQL 服务已启动：`mysqladmin -uroot -p你的密码 ping`
+2. 确认数据库 `redis_spring_pra` 已创建：见「第 4 步 初始化 MySQL」
+3. 确认 `application.yml` 中 `spring.datasource.username/password` 与你的 MySQL 一致
+4. 若报 `Unsupported character encoding`，检查 JDBC URL 的 `characterEncoding` 参数是 `UTF-8`（Java 字符集名），不是 `utf8mb4`
 
 **Q：测试可以重复执行吗？**
 可以。每个测试前会自动清理相关 Redis key（`@BeforeEach cleanKeys`）。

@@ -4,7 +4,7 @@ import com.dev.redisspringpra.common.BizException;
 import com.dev.redisspringpra.config.AppProperties;
 import com.dev.redisspringpra.constant.RedisKeyConstants;
 import com.dev.redisspringpra.entity.User;
-import com.dev.redisspringpra.repository.MockDb;
+import com.dev.redisspringpra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -36,7 +36,7 @@ public class TokenService {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final AppProperties appProperties;
-    private final MockDb mockDb;
+    private final UserRepository userRepository;
 
     /**
      * 登录：生成 Token 存入 Redis
@@ -46,7 +46,7 @@ public class TokenService {
      */
     public String login(Long userId) {
         // 校验用户存在
-        mockDb.findUserById(userId).orElseThrow(() -> new BizException("用户不存在"));
+        userRepository.findById(userId).orElseThrow(() -> new BizException("用户不存在"));
 
         // 生成唯一 Token（UUID 带无连字符格式）
         String token = UUID.randomUUID().toString().replace("-", "");
@@ -80,7 +80,7 @@ public class TokenService {
 
         // 3. 返回用户信息
         Long userId = Long.valueOf(userIdObj.toString());
-        return mockDb.findUserById(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new BizException(401, "用户不存在"));
     }
 

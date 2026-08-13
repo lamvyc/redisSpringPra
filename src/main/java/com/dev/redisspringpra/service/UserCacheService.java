@@ -3,7 +3,7 @@ package com.dev.redisspringpra.service;
 import com.dev.redisspringpra.common.BizException;
 import com.dev.redisspringpra.constant.RedisKeyConstants;
 import com.dev.redisspringpra.entity.User;
-import com.dev.redisspringpra.repository.MockDb;
+import com.dev.redisspringpra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -35,7 +35,13 @@ import java.util.concurrent.TimeUnit;
 public class UserCacheService {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final MockDb mockDb;
+    private final UserRepository userRepository;
+
+    // 显式构造方法（如需手动注入可参考）
+    //    public UserCacheService(RedisTemplate<String, Object> redisTemplate, UserRepository userRepository) {
+    //        this.redisTemplate = redisTemplate;
+    //        this.userRepository = userRepository;
+    //    }
 
     /** 缓存过期时间：30 分钟 */
     private static final Duration CACHE_TTL = Duration.ofMinutes(30);
@@ -46,6 +52,7 @@ public class UserCacheService {
      * 流程：查缓存 → 命中返回 / 未命中查 DB 写缓存
      */
     public User getUserById(Long userId) {
+        // 生成缓存 Key
         String key = RedisKeyConstants.USER_INFO + userId;
 
         // 1. 先查 Redis 缓存
@@ -57,7 +64,7 @@ public class UserCacheService {
         log.debug("【缓存未命中】key={}，查询数据库", key);
 
         // 2. 未命中，查数据库
-        User user = mockDb.findUserById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BizException("用户不存在"));
 
         // 3. 缓存重建：写回 Redis 并设置过期时间
@@ -78,7 +85,7 @@ public class UserCacheService {
         String key = RedisKeyConstants.USER_INFO + userId;
 
         // 1. 先更新数据库
-        User user = mockDb.findUserById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BizException("用户不存在"));
         if (name != null) {
             user.setName(name);
@@ -86,7 +93,7 @@ public class UserCacheService {
         if (age != null) {
             user.setAge(age);
         }
-        mockDb.updateUser(user);
+        userRepository.save(user);
         log.debug("【更新数据库】userId={}", userId);
 
         // 2. 再删除缓存（下次查询时重建）
@@ -116,3 +123,7 @@ public class UserCacheService {
         return ttl;
     }
 }
+
+/**
+ *
+ * */
