@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    案例11：日志配置文件 logback-spring.xml
+
+    为什么要用 logback-spring.xml 而不是 logback.xml？
+    - logback-spring.xml：Spring Boot 会在「应用配置（application.yml）之后」加载，
+      也就是说可以使用 application.yml 里定义的配置（如 spring.application.name），
+      也能用 <springProfile> 按环境区分配置。
+    - logback.xml：由 Logback 直接加载，加载时机最早，"${}" 拿不到 application.yml 的东西。
+
+    加载优先级：bootstrap.yml > application.yml > logback-spring.xml（按需依次生效）
+-->
+<configuration>
+
+    <!-- ============ 1. 定义属性（变量） ============ -->
+    <!-- 日志输出到的目录；本机为 macOS 项目下 logs 文件夹 -->
+    <property name="LOG_DIR" value="${user.dir}/logs"/>
+    <!-- 应用名来自 application.yml 的 spring.application.name -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name"
+                    defaultValue="redisSpringPra"/>
+
+    <!-- ============ 2. 控制台输出：格式 pattern ============ -->
+    <!--
+        pattern 各占位符含义（记忆锚点）：
+        %d{yyyy-MM-dd HH:mm:ss.SSS}   时间（精确到毫秒）
+        %-5level                       日志级别，左对齐占 5 个字符（TRACE/DEBUG/INFO /WARN /ERROR）
+        [%thread]                      线程名，方便排查并发问题
+        %logger{40}                    打印日志的类名，最多 40 个字符（超出截断）
+        %msg%n                         日志内容 + 换行
+    -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{40} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ============ 3. 文件输出：按天滚动，保留历史 ============ -->
+    <!--
+        RollingFileAppender：把日志写到文件，达到条件后「滚动」生成新文件。
+        团队/生产环境排查必开，因为控制台日志会随进程退出丢失。
+    -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 当前正在写的日志文件 -->
+        <file>${LOG_DIR}/${APP_NAME}.log</file>
+
+        <!-- 滚动策略：按天生成新文件 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 文件名带日期；%d{yyyy-MM-dd} 自动按天替换 -->
+            <fileNamePattern>${LOG_DIR}/${APP_NAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 最多保留 30 天历史日志（超过自动删除） -->
+            <maxHistory>30</maxHistory>
+            <!-- 所有日志文件总大小上限（超过也触发删除旧文件） -->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{40} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ============ 4. 设置日志级别 ============ -->
+    <!--
+        级别从低到高：TRACE < DEBUG < INFO < WARN < ERROR
+        只有「大于等于配置级别」的日志才会输出。
+
+        这里设置：本项目包 com.dev.redisspringpra 用 debug 级别（能看到 debug 演示），
+        其余（Spring 框架、Hibernate 等）用 info，避免被框架日志刷屏。
+    -->
+    <logger name="com.dev.redisspringpra" level="debug" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <!--
+        单独把某个类调到 TRACE 级别，演示 trace 日志如何开启。
+        注释掉即关闭，改成 debug/warn 等可灵活调整。
+    -->
+    <logger name="com.dev.redisspringpra.service.LogDemoService" level="trace"/>
+
+    <!-- 根日志：兜底，所有没被单独命中的包走这里 -->
+    <root level="info">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

@@ -192,6 +192,23 @@ Redis 是**基于内存的键值型 NoSQL 数据库**，解决「高速读写 + 
 - **流程**：发布者 convertAndSend → PUBLISH 频道 → 订阅者回调 onMessage
 - **缺点（面试重点）**：消息不持久化，订阅者不在线消息丢失；可靠消息用 Stream/MQ
 
+## 案例11：日志使用全流程（@Slf4j + Logback）
+- **代码**：`service/LogDemoService.java`、`controller/LogDemoController.java`、`resources/logback-spring.xml`
+- **背景**：Spring Boot 默认集成 SLF4J(门面) + Logback(实现)，`@Slf4j` 编译期生成 `log` 对象，直接 `log.xxx()` 即可，无需额外依赖
+- **五个级别**：TRACE < DEBUG < INFO < WARN < ERROR（只有「大于等于配置级别」的日志才输出）
+  - trace：最细粒度，追踪执行轨迹，生产几乎不开
+  - debug：调试信息（缓存命不中、SQL 参数），开发排障用
+  - info：关键业务流程节点，生产默认开到此级
+  - warn：潜在问题但不影响主流程（如降级、重试）
+  - error：错误，必须记录，且要把异常对象作最后参数带出完整堆栈
+- **占位符 {} 为什么比字符串拼接好**：`log.debug("id={}", id)` 级别被过滤时底层不拼接，零开销（惰性求值）；拼接写法先执行拼接再判断级别，浪费性能
+- **日志配置三个核心**：pattern（格式）、appender（输出到控制台/文件）、logger（按包/类设置级别）
+- **文件滚动**：`RollingFileAppender` + `TimeBasedRollingPolicy` 按天生成新文件，`maxHistory=30` 保留 30 天，`totalSizeCap` 控制总大小
+
+### 面试回答
+**问：@Slf4j 是什么？日志级别如何选择？**
+答：@Slf4j 是 Lombok 注解，编译时生成 `private static final Logger log = LoggerFactory.getLogger(...)`；底层 SLF4J 是门面接口、Logback 是实现。级别由低到高 TRACE/DEBUG/INFO/WARN/ERROR，生产默认 INFO，排查问题临时开 DEBUG，性能敏感路径慎开 TRACE。error 必须记录异常堆栈 `log.error("msg", e)`，否则只有一句报错信息排不了障。
+
 ---
 
 # 第五阶段 面试专题速记
@@ -273,3 +290,6 @@ JAVA_HOME=/Users/unravel/Library/Java/JavaVirtualMachines/ms-21.0.12/Contents/Ho
 | POST `/api/stock/3/seckill?userId=1` | 秒杀/分布式锁 |
 | POST `/api/notice/publish?message=xx` | Pub/Sub |
 | GET `/api/cache/user/1` | Spring Cache |
+| GET `/api/log/levels?userId=1&name=张三` | 日志演示 |
+| GET `/api/log/error` | 日志 error |
+| GET `/api/log/flow?orderNo=xxx` | 日志业务流程 |
