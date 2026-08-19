@@ -17,7 +17,7 @@
         <java.version>21</java.version>
     </properties>
     <dependencies>
-        <!-- Web MVC：提供 Controller 能力 -->
+        <!-- Web MVC：提供 Controller 能力（处理 HTTP 请求/响应） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

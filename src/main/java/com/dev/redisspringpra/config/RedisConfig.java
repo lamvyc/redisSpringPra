@@ -37,8 +37,8 @@ import java.time.Duration;
  * 2. 必须开启默认类型写入（activateDefaultTyping）：
  *    Redis 不知道 Java 对象类型，写入 @class 字段后反序列化才能还原成 User/Product。
  */
-@Configuration
-@EnableCaching
+@Configuration // 这是一个 Spring 配置类
+@EnableCaching // 开启 Spring Cache 功能。
 public class RedisConfig {
 
     /**
@@ -112,3 +112,91 @@ public class RedisConfig {
                 .build();
     }
 }
+
+/**
+ * 最应该记的其实只有 8 个东西
+ * ① @Configuration
+ *    ↓
+ *    这是一个 Spring 配置类
+ *
+ * ② @Bean
+ *    ↓
+ *    把对象交给 Spring 管理
+ *
+ * ③ RedisConnectionFactory
+ *    ↓
+ *    Redis 连接工厂
+ *
+ * ④ RedisTemplate
+ *    ↓
+ *    Java 手动操作 Redis
+ *
+ * ⑤ StringRedisSerializer
+ *    ↓
+ *    Key → String
+ *
+ * ⑥ GenericJackson2JsonRedisSerializer
+ *    ↓
+ *    Value → JSON
+ *
+ * ⑦ @EnableCaching
+ *    ↓
+ *    开启 Spring Cache
+ *
+ * ⑧ CacheManager
+ *    ↓
+ *    管理 @Cacheable 等缓存
+ *
+ * 然后再补
+ * ObjectMapper
+ *     ↓
+ * Java ↔ JSON
+ *
+ * JavaTimeModule
+ *     ↓
+ * 支持 LocalDateTime
+ *
+ * DefaultTyping
+ *     ↓
+ * 保存 Java 类型信息
+ *
+ * TTL
+ *     ↓
+ * 缓存自动过期
+ *
+ *
+ *
+ *
+ * 这整个类其实就干 3 件事：
+ * RedisConfig
+ * │
+ * ├── ① 告诉 RedisTemplate：
+ * │      Key 怎么存？
+ * │      Value 怎么存？
+ * │
+ * ├── ② 告诉 Spring Cache：
+ * │      Key 怎么存？
+ * │      Value 怎么存？
+ * │      默认过期多久？
+ * │
+ * └── ③ 告诉 Jackson：
+ *        Java 对象怎么变成 JSON？
+ *        JSON 怎么变回 Java 对象？
+ *        LocalDateTime 怎么处理？
+ *
+ * 实际上是：
+ * RedisConfig
+ *     │
+ *     ├── ObjectMapper
+ *     │      ↓
+ *     │   负责 JSON 序列化规则
+ *     │
+ *     ├── RedisTemplate
+ *     │      ↓
+ *     │   负责你手动操作 Redis 时的数据格式
+ *     │
+ *     └── CacheManager
+ *            ↓
+ *         负责 @Cacheable 等 Spring Cache
+ *
+ * */

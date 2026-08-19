@@ -30,6 +30,18 @@ public class RedissonConfig {
         // 单机模式（生产环境可用 .useSentinelServers() / .useClusterServers()）
         config.useSingleServer()
                 .setAddress(address);
+        // 根据配置创建真正的 RedissonClient。
         return Redisson.create(config);
     }
 }
+
+/**
+ * @Configuration告诉 Spring：这个类是一个“配置类”，里面会定义一些需要交给 Spring 管理的对象。
+ *
+ * @Value = 从配置文件中读取一个值，注入到 Java 属性里。
+ * @Value("${redisson.single-server-config.address:redis://localhost:6379}")
+ * private String address;
+ * 放在一起看，@Value是修饰address的
+ * 去配置文件找 redisson.single-server-config.address，如果找不到，就使用 redis://localhost:6379。
+ * 找到了就使用配置文件里的
+ * */

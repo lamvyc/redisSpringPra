@@ -14,10 +14,10 @@
 | Java              | 21        | 开发语言                                               |
 | Spring Data Redis | 随 Boot 管理 | RedisTemplate / StringRedisTemplate / Spring Cache |
 | Redisson          | 3.38.1    | 分布式锁                                               |
-| MySQL             | 8.x       | 业务数据持久化（t_user / t_product）                       |
+| MySQL             | 8.x       | 业务数据持久化（t_user / t_product）                        |
 | Spring Data JPA   | 随 Boot 管理 | 数据库 ORM 访问                                         |
 | JdbcTemplate      | 随 Boot 管理 | 种子数据初始化（原生 INSERT）                                 |
-| Lombok            | 1.18.46   | 简化实体代码（显式固定版本，兼容高版本 JDK 编译）                      |
+| Lombok            | 1.18.46   | 简化实体代码（显式固定版本，兼容高版本 JDK 编译）                        |
 | Redis             | 7.x（本机）   | 缓存 / 数据结构 / Pub/Sub                                |
 
 ---
@@ -26,12 +26,12 @@
 
 ### 1. 环境要求
 
-| 依赖    | 版本   | 验证命令                                          |
-|-------|------|-----------------------------------------------|
-| JDK   | 21   | `java -version`                               |
-| Maven | 3.9+ | `mvn -version`                                |
-| Redis | 5.0+ | `redis-server --version`                      |
-| MySQL | 8.x  | `mysql --version` 且本机 MySQL 服务已启动           |
+| 依赖    | 版本   | 验证命令                              |
+|-------|------|-----------------------------------|
+| JDK   | 21   | `java -version`                   |
+| Maven | 3.9+ | `mvn -version`                    |
+| Redis | 5.0+ | `redis-server --version`          |
+| MySQL | 8.x  | `mysql --version` 且本机 MySQL 服务已启动 |
 
 ### 2. 获取代码
 

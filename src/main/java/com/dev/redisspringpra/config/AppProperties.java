@@ -46,3 +46,27 @@ public class AppProperties {
         private int windowSeconds = 60;
     }
 }
+
+/**
+ * @ConfigurationProperties = 把 application.yml 中的一组配置，批量绑定到 Java 对象。
+ * 例如
+ * @ConfigurationProperties(prefix = "app")
+ * 去 application.yml 找 app 开头的配置，然后绑定到 AppProperties 对象。
+ *
+ *
+ * @Value
+ * │
+ * └── 一个一个拿配置
+ *     ${app.captcha.length}
+ *
+ *
+ * @ConfigurationProperties
+ * │
+ * └── 一整组拿配置
+ *     prefix = "app"
+ *
+ *     app
+ *     ├── captcha
+ *     ├── token
+ *     └── rate-limit
+ * */
