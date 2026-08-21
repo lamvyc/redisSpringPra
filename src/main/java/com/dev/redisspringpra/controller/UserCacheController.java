@@ -85,3 +85,11 @@ public class UserCacheController {
  * @RequestParam:从查询参数取值 (/users?name=张三)
  * @RequestBody:从请求体取值(JSON/XML)
  * */
+
+/**
+ * spring 依赖注入的核心理念："只需声明你需要的，框架会为你注入"
+ * 你不需要关心：❌ 实例从哪里来; ❌ 什么时候创建; ❌ 怎么传进来
+ * <p>
+ * 你只需要：✅ 声明依赖；✅ 使用依赖
+ * <p>
+ * */

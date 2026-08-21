@@ -20,6 +20,15 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+
+    /**
+     * 注意这里：
+     * 真实的是使用mybatis或者mybatis-plus代替JPA/Hibernate是吧
+     * 为什么不用 JPA/Hibernate？
+     * SQL 可控性差：JPA 自动生成的 SQL 在复杂查询下性能拉胯，DBA 没法调优。
+     * 联调成本高：互联网业务经常需要 DBA 审核 SQL，JPA 的 HQL 转 SQL 黑盒让 DBA 崩溃
+     *
+     * */
 }
 
 
